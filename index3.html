@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bauernschnapsen Punkte</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f0f0f0;
+    }
+    h1 {
+      text-align: center;
+    }
+    .flex {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .block {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+    .block input[type="text"] {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 5px;
+    }
+    .block label {
+      display: block;
+      margin: 5px 0;
+    }
+    .button {
+      margin-top: 10px;
+      padding: 10px;
+      width: 100%;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    .highlight {
+      font-weight: bold;
+      margin-top: 15px;
+    }
+    .center {
+      text-align: center;
+    }
+    #rundenListe {
+      margin-top: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      background: #fff;
+      padding: 10px;
+      border: 1px solid #ddd;
+    }
+  </style>
+</head>
+<body>
+  <h1>Bauernschnapsen Punkte</h1>
+
+  <div class="flex">
+    <div class="block">
+      <label>Spieler 1 Name:
+        <input type="text" id="spieler1Name" value="Spieler 1" />
+      </label>
+      <label>Spieler 2 Name:
+        <input type="text" id="spieler2Name" value="Spieler 2" />
+      </label>
+
+      <h3>Spiele</h3>
+      <label><input type="radio" name="spiel" value="Normales Spiel"> Normales Spiel (1)</label>
+      <label><input type="radio" name="spiel" value="Normales Spiel2"> Normales Spiel (2)</label>
+      <label><input type="radio" name="spiel" value="Normales Spiel3"> Normales Spiel (3)</label>
+      <label><input type="radio" name="spiel" value="Bettler"> Bettler (4)</label>
+      <label><input type="radio" name="spiel" value="Assbettler"> Assbettler (5)</label>
+      <label><input type="radio" name="spiel" value="Schnapser"> Schnapser (6)</label>
+      <label><input type="radio" name="spiel" value="Plauderer"> Plauderer (7)</label>
+      <label><input type="radio" name="spiel" value="Gang"> Gang (9)</label>
+      <label><input type="radio" name="spiel" value="10ner Loch"> 10ner Loch (10)</label>
+      <label><input type="radio" name="spiel" value="Doppel Assbettler"> Doppel Assbettler (11)</label>
+      <label><input type="radio" name="spiel" value="Bauer"> Bauer (12)</label>
+      <label><input type="radio" name="spiel" value="Farbensolo"> Farbensolo (18)</label>
+      <label><input type="radio" name="spiel" value="Herrnbauer"> Herrnbauer (24)</label>
+
+      <label><input type="checkbox" id="herzCheckbox"> Herz (doppelte Punkte)</label>
+
+      <button class="button" onclick="addPunkte('player1')">Bestätigen Spieler 1</button>
+      <button class="button" onclick="addPunkte('player2')">Bestätigen Spieler 2</button>
+      <button class="button" onclick="undoLast()">Rückgängig</button>
+      <button class="button" onclick="resetAll()">Reset</button>
+    </div>
+
+    <div class="block">
+      <table id="punkteTabelle">
+        <thead>
+          <tr>
+            <th id="header1">Spieler 1</th>
+            <th id="header2">Spieler 2</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+        <tfoot>
+          <tr>
+            <td id="sum1">0</td>
+            <td id="sum2">0</td>
+          </tr>
+        </tfoot>
+      </table>
+      <div id="ergebnis" class="highlight center"></div>
+      <div id="rundenListe"></div>
+    </div>
+  </div>
+
+  <script>
+    const punkteMap = {
+      "Normales Spiel": 1,
+      "Normales Spiel2": 2,
+      "Normales Spiel3": 3,
+      "Bettler": 4,
+      "Assbettler": 5,
+      "Schnapser": 6,
+      "Plauderer": 7,
+      "Gang": 9,
+      "10ner Loch": 10,
+      "Doppel Assbettler": 11,
+      "Bauer": 12,
+      "Farbensolo": 18,
+      "Herrnbauer": 24
+    };
+
+    let sumPlayer1 = 0;
+    let sumPlayer2 = 0;
+    let history = [];
+
+    function updateNames() {
+      document.getElementById("header1").textContent = document.getElementById("spieler1Name").value;
+      document.getElementById("header2").textContent = document.getElementById("spieler2Name").value;
+    }
+
+    function addPunkte(player) {
+      updateNames();
+      const selected = document.querySelector('input[name="spiel"]:checked');
+      const isHerz = document.getElementById("herzCheckbox").checked;
+
+      if (!selected) {
+        alert("Bitte wähle ein Spiel aus.");
+        return;
+      }
+
+      const spiel = selected.value;
+      let punkte = punkteMap[spiel];
+      if (isHerz) punkte *= 2;
+
+      const row = document.createElement("tr");
+      const cell1 = document.createElement("td");
+      const cell2 = document.createElement("td");
+
+      let rundenText = "";
+
+      if (player === 'player1') {
+        cell1.textContent = punkte;
+        cell2.textContent = "";
+        sumPlayer1 += punkte;
+        rundenText = `${document.getElementById("spieler1Name").value} erhält ${punkte} Punkte für "${spiel}"`;
+      } else {
+        cell1.textContent = "";
+        cell2.textContent = punkte;
+        sumPlayer2 += punkte;
+        rundenText = `${document.getElementById("spieler2Name").value} erhält ${punkte} Punkte für "${spiel}"`;
+      }
+
+      row.appendChild(cell1);
+      row.appendChild(cell2);
+      document.getElementById("tableBody").appendChild(row);
+      document.getElementById("sum1").textContent = sumPlayer1;
+      document.getElementById("sum2").textContent = sumPlayer2;
+
+      const liste = document.getElementById("rundenListe");
+      const neuerEintrag = document.createElement("div");
+      neuerEintrag.textContent = rundenText;
+      liste.appendChild(neuerEintrag);
+
+      history.push({ row, punkte, player, listeintrag: neuerEintrag });
+      checkSpielende();
+
+      // --- NEU: Reset Auswahl und Herz ---
+      selected.checked = false;
+      document.getElementById("herzCheckbox").checked = false;
+    }
+
+    function undoLast() {
+      if (history.length === 0) return;
+      const last = history.pop();
+      last.row.remove();
+      last.listeintrag.remove();
+
+      if (last.player === 'player1') sumPlayer1 -= last.punkte;
+      else sumPlayer2 -= last.punkte;
+
+      document.getElementById("sum1").textContent = sumPlayer1;
+      document.getElementById("sum2").textContent = sumPlayer2;
+      document.getElementById("ergebnis").textContent = "";
+    }
+
+    function resetAll() {
+      sumPlayer1 = 0;
+      sumPlayer2 = 0;
+      history = [];
+      document.getElementById("sum1").textContent = "0";
+      document.getElementById("sum2").textContent = "0";
+      document.getElementById("tableBody").innerHTML = "";
+      document.getElementById("rundenListe").innerHTML = "";
+      document.getElementById("ergebnis").textContent = "";
+    }
+
+    function checkSpielende() {
+      if (sumPlayer1 >= 100 || sumPlayer2 >= 100) {
+        let result1 = sumPlayer1 <= 100 ? sumPlayer1 : 100 + 2 * (sumPlayer1 - 100);
+        let result2 = sumPlayer2 <= 100 ? sumPlayer2 : 100 + 2 * (sumPlayer2 - 100);
+        let diff = Math.abs(result1 - result2);
+        const winner = result1 > result2
+          ? document.getElementById("spieler1Name").value
+          : document.getElementById("spieler2Name").value;
+        document.getElementById("ergebnis").textContent = `${winner} gewinnt mit Differenz ${diff}`;
+      }
+    }
+  </script>
+</body>
+</html>
