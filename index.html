@@ -27,7 +27,8 @@
       width: 100%;
       max-width: 400px;
     }
-    .block input[type="text"] {
+    .block input[type="text"],
+    .block input[type="number"] {
       width: 100%;
       margin-bottom: 10px;
       padding: 5px;
@@ -74,10 +75,10 @@
   <div class="flex">
     <div class="block">
       <label>Spieler 1 Name:
-        <input type="text" id="spieler1Name" value="Spieler 1" />
+        <input type="text" id="spieler1Name" value="Spieler 1" oninput="updateButtons()" />
       </label>
       <label>Spieler 2 Name:
-        <input type="text" id="spieler2Name" value="Spieler 2" />
+        <input type="text" id="spieler2Name" value="Spieler 2" oninput="updateButtons()" />
       </label>
 
       <h3>Spiele</h3>
@@ -97,8 +98,12 @@
 
       <label><input type="checkbox" id="herzCheckbox"> Herz (doppelte Punkte)</label>
 
-      <button class="button" onclick="addPunkte('player1')">Bestätigen Spieler 1</button>
-      <button class="button" onclick="addPunkte('player2')">Bestätigen Spieler 2</button>
+      <label>Manuelle Punkteingabe:
+        <input type="number" id="manuellePunkte" placeholder="z. B. 8" />
+      </label>
+
+      <button class="button" id="button1" onclick="addPunkte('player1')">Spieler 1 bestätigt Punkte</button>
+      <button class="button" id="button2" onclick="addPunkte('player2')">Spieler 2 bestätigt Punkte</button>
       <button class="button" onclick="undoLast()">Rückgängig</button>
       <button class="button" onclick="resetAll()">Reset</button>
     </div>
@@ -145,24 +150,42 @@
     let sumPlayer2 = 0;
     let history = [];
 
+    function updateButtons() {
+      const name1 = document.getElementById("spieler1Name").value.trim() || "Spieler 1";
+      const name2 = document.getElementById("spieler2Name").value.trim() || "Spieler 2";
+
+      document.getElementById("button1").textContent = `${name1} bestätigt Punkte`;
+      document.getElementById("button2").textContent = `${name2} bestätigt Punkte`;
+      updateNames();
+    }
+
     function updateNames() {
-      document.getElementById("header1").textContent = document.getElementById("spieler1Name").value;
-      document.getElementById("header2").textContent = document.getElementById("spieler2Name").value;
+      document.getElementById("header1").textContent = document.getElementById("spieler1Name").value || "Spieler 1";
+      document.getElementById("header2").textContent = document.getElementById("spieler2Name").value || "Spieler 2";
     }
 
     function addPunkte(player) {
       updateNames();
+
+      const manuellePunkte = parseInt(document.getElementById("manuellePunkte").value);
       const selected = document.querySelector('input[name="spiel"]:checked');
       const isHerz = document.getElementById("herzCheckbox").checked;
 
-      if (!selected) {
-        alert("Bitte wähle ein Spiel aus.");
+      let punkte = 0;
+      let beschreibung = "";
+
+      if (!isNaN(manuellePunkte)) {
+        punkte = manuellePunkte;
+        beschreibung = `manuell eingetragene ${punkte} Punkte`;
+      } else if (selected) {
+        const spiel = selected.value;
+        punkte = punkteMap[spiel];
+        if (isHerz) punkte *= 2;
+        beschreibung = `"${spiel}"${isHerz ? " (Herz verdoppelt)" : ""}`;
+      } else {
+        alert("Bitte wähle ein Spiel oder gib manuelle Punkte ein.");
         return;
       }
-
-      const spiel = selected.value;
-      let punkte = punkteMap[spiel];
-      if (isHerz) punkte *= 2;
 
       const row = document.createElement("tr");
       const cell1 = document.createElement("td");
@@ -174,12 +197,12 @@
         cell1.textContent = punkte;
         cell2.textContent = "";
         sumPlayer1 += punkte;
-        rundenText = `${document.getElementById("spieler1Name").value} erhält ${punkte} Punkte für "${spiel}"`;
+        rundenText = `${document.getElementById("spieler1Name").value} erhält ${punkte} Punkte für ${beschreibung}`;
       } else {
         cell1.textContent = "";
         cell2.textContent = punkte;
         sumPlayer2 += punkte;
-        rundenText = `${document.getElementById("spieler2Name").value} erhält ${punkte} Punkte für "${spiel}"`;
+        rundenText = `${document.getElementById("spieler2Name").value} erhält ${punkte} Punkte für ${beschreibung}`;
       }
 
       row.appendChild(cell1);
@@ -194,10 +217,12 @@
       liste.appendChild(neuerEintrag);
 
       history.push({ row, punkte, player, listeintrag: neuerEintrag });
+
       checkSpielende();
 
-      // --- NEU: Reset Auswahl und Herz ---
-      selected.checked = false;
+      // Zurücksetzen
+      document.getElementById("manuellePunkte").value = "";
+      if (selected) selected.checked = false;
       document.getElementById("herzCheckbox").checked = false;
     }
 
@@ -237,6 +262,9 @@
         document.getElementById("ergebnis").textContent = `${winner} gewinnt mit Differenz ${diff}`;
       }
     }
+
+    // Initial Buttons setzen
+    updateButtons();
   </script>
 </body>
 </html>
