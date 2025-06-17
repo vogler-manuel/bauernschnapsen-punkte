@@ -41,6 +41,23 @@
       margin-top: 10px;
       padding: 10px;
       width: 100%;
+      color: white; /* Textfarbe weiß */
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease; /* Sanfter Übergang */
+    }
+    .button.red {
+        background-color: #dc3545; /* Rot für Standard-Buttons */
+    }
+    .button.blue {
+        background-color: #007bff; /* Blau für den Rückgängig-Button */
+    }
+    .button.grey {
+        background-color: #6c757d; /* Grau für die Startfarbe der Spieler-Buttons */
+    }
+    .button.green {
+        background-color: #28a745; /* Grün, wenn Punkte ausgewählt wurden */
     }
     table {
       border-collapse: collapse;
@@ -66,6 +83,10 @@
       background: #fff;
       padding: 10px;
       border: 1px solid #ddd;
+    }
+    .player-name-highlight {
+        /* color: green; <-- Diese Zeile wurde entfernt, um die Farbe schwarz zu lassen */
+        font-weight: bold;
     }
   </style>
 </head>
@@ -99,13 +120,13 @@
       <label><input type="checkbox" id="herzCheckbox"> Herz (doppelte Punkte)</label>
 
       <label>Manuelle Punkteingabe:
-        <input type="number" id="manuellePunkte" placeholder="z. B. 8" />
+        <input type="number" id="manuellePunkte" placeholder="z.B. 8" />
       </label>
 
-      <button class="button" id="button1" onclick="addPunkte('player1')">Spieler 1 bestätigt Punkte</button>
-      <button class="button" id="button2" onclick="addPunkte('player2')">Spieler 2 bestätigt Punkte</button>
-      <button class="button" onclick="undoLast()">Rückgängig</button>
-      <button class="button" onclick="resetAll()">Reset</button>
+      <button class="button grey" id="button1" onclick="addPunkte('player1')">Spieler 1 bestätigt Punkte</button>
+      <button class="button grey" id="button2" onclick="addPunkte('player2')">Spieler 2 bestätigt Punkte</button>
+      <button class="button blue" onclick="undoLast()">Rückgängig</button>
+      <button class="button red" onclick="resetAll()">Reset</button>
     </div>
 
     <div class="block">
@@ -160,12 +181,19 @@
     }
 
     function updateNames() {
-      document.getElementById("header1").textContent = document.getElementById("spieler1Name").value || "Spieler 1";
-      document.getElementById("header2").textContent = document.getElementById("spieler2Name").value || "Spieler 2";
+      const header1 = document.getElementById("header1");
+      const header2 = document.getElementById("header2");
+
+      header1.textContent = document.getElementById("spieler1Name").value || "Spieler 1";
+      header2.textContent = document.getElementById("spieler2Name").value || "Spieler 2";
+
+      // Entferne alle Highlight-Klassen vor dem Aktualisieren
+      header1.classList.remove("player-name-highlight");
+      header2.classList.remove("player-name-highlight");
     }
 
     function addPunkte(player) {
-      updateNames();
+      updateNames(); // Namen zurücksetzen, um Highlights zu entfernen
 
       const manuellePunkte = parseInt(document.getElementById("manuellePunkte").value);
       const selected = document.querySelector('input[name="spiel"]:checked');
@@ -174,7 +202,7 @@
       let punkte = 0;
       let beschreibung = "";
 
-      if (!isNaN(manuellePunkte)) {
+      if (!isNaN(manuellePunkte) && document.getElementById("manuellePunkte").value !== "") {
         punkte = manuellePunkte;
         beschreibung = `manuell eingetragene ${punkte} Punkte`;
       } else if (selected) {
@@ -193,16 +221,30 @@
 
       let rundenText = "";
 
+      // Entferne die grüne Klasse von beiden Buttons, bevor du eine neue setzt
+      document.getElementById("button1").classList.remove("green");
+      document.getElementById("button2").classList.remove("green");
+      // Stelle sicher, dass sie grau sind, falls sie vorher grün waren und jetzt nicht mehr aktiv sind
+      document.getElementById("button1").classList.add("grey");
+      document.getElementById("button2").classList.add("grey");
+
+
       if (player === 'player1') {
         cell1.textContent = punkte;
         cell2.textContent = "";
         sumPlayer1 += punkte;
         rundenText = `${document.getElementById("spieler1Name").value} erhält ${punkte} Punkte für ${beschreibung}`;
+        document.getElementById("header1").classList.add("player-name-highlight"); // Spieler 1 hervorheben (nur fett, nicht farbig)
+        document.getElementById("button1").classList.remove("grey"); // Grau entfernen
+        document.getElementById("button1").classList.add("green"); // Grün hinzufügen
       } else {
         cell1.textContent = "";
         cell2.textContent = punkte;
         sumPlayer2 += punkte;
         rundenText = `${document.getElementById("spieler2Name").value} erhält ${punkte} Punkte für ${beschreibung}`;
+        document.getElementById("header2").classList.add("player-name-highlight"); // Spieler 2 hervorheben (nur fett, nicht farbig)
+        document.getElementById("button2").classList.remove("grey"); // Grau entfernen
+        document.getElementById("button2").classList.add("green"); // Grün hinzufügen
       }
 
       row.appendChild(cell1);
@@ -220,7 +262,7 @@
 
       checkSpielende();
 
-      // Zurücksetzen
+      // Zurücksetzen der Eingabefelder
       document.getElementById("manuellePunkte").value = "";
       if (selected) selected.checked = false;
       document.getElementById("herzCheckbox").checked = false;
@@ -228,19 +270,43 @@
 
     function undoLast() {
       if (history.length === 0) return;
+
       const last = history.pop();
       last.row.remove();
       last.listeintrag.remove();
 
-      if (last.player === 'player1') sumPlayer1 -= last.punkte;
-      else sumPlayer2 -= last.punkte;
+      if (last.player === 'player1') {
+        sumPlayer1 -= last.punkte;
+        // Wenn keine weiteren Einträge für Spieler 1 in der History sind, Button wieder grau machen
+        if (!history.some(item => item.player === 'player1')) {
+            document.getElementById("button1").classList.remove("green");
+            document.getElementById("button1").classList.add("grey");
+        }
+      }
+      else {
+        sumPlayer2 -= last.punkte;
+        // Wenn keine weiteren Einträge für Spieler 2 in der History sind, Button wieder grau machen
+        if (!history.some(item => item.player === 'player2')) {
+            document.getElementById("button2").classList.remove("green");
+            document.getElementById("button2").classList.add("grey");
+        }
+      }
 
       document.getElementById("sum1").textContent = sumPlayer1;
       document.getElementById("sum2").textContent = sumPlayer2;
       document.getElementById("ergebnis").textContent = "";
+
+      // Entferne Highlights nach dem Rückgängig machen
+      document.getElementById("header1").classList.remove("player-name-highlight");
+      document.getElementById("header2").classList.remove("player-name-highlight");
     }
 
     function resetAll() {
+      // Frage zur Bestätigung vor dem Reset
+      if (!confirm("Möchtest du wirklich das Spiel neu starten? Alle Punkte gehen verloren.")) {
+        return; // Abbruch, wenn der Benutzer auf "Abbrechen" klickt
+      }
+
       sumPlayer1 = 0;
       sumPlayer2 = 0;
       history = [];
@@ -249,17 +315,51 @@
       document.getElementById("tableBody").innerHTML = "";
       document.getElementById("rundenListe").innerHTML = "";
       document.getElementById("ergebnis").textContent = "";
+
+      // Setze Spieler-Buttons auf grau zurück
+      document.getElementById("button1").classList.remove("green");
+      document.getElementById("button1").classList.add("grey");
+      document.getElementById("button2").classList.remove("green");
+      document.getElementById("button2").classList.add("grey");
+
+      // Entferne Highlights beim Reset
+      document.getElementById("header1").classList.remove("player-name-highlight");
+      document.getElementById("header2").classList.remove("player-name-highlight");
     }
 
     function checkSpielende() {
+      const spieler1Name = document.getElementById("spieler1Name").value || "Spieler 1";
+      const spieler2Name = document.getElementById("spieler2Name").value || "Spieler 2";
+
       if (sumPlayer1 >= 100 || sumPlayer2 >= 100) {
-        let result1 = sumPlayer1 <= 100 ? sumPlayer1 : 100 + 2 * (sumPlayer1 - 100);
-        let result2 = sumPlayer2 <= 100 ? sumPlayer2 : 100 + 2 * (sumPlayer2 - 100);
-        let diff = Math.abs(result1 - result2);
-        const winner = result1 > result2
-          ? document.getElementById("spieler1Name").value
-          : document.getElementById("spieler2Name").value;
+        let finalPlayer1Score = sumPlayer1;
+        let finalPlayer2Score = sumPlayer2;
+
+        // Punkte über 100 sollen doppelt gezählt werden
+        if (sumPlayer1 > 100) {
+          finalPlayer1Score = 100 + 2 * (sumPlayer1 - 100);
+        }
+        if (sumPlayer2 > 100) {
+          finalPlayer2Score = 100 + 2 * (sumPlayer2 - 100);
+        }
+
+        let winner = '';
+        let diff = 0;
+
+        if (finalPlayer1Score > finalPlayer2Score) {
+          winner = spieler1Name;
+          diff = finalPlayer1Score - finalPlayer2Score;
+        } else if (finalPlayer2Score > finalPlayer1Score) {
+          winner = spieler2Name;
+          diff = finalPlayer2Score - finalPlayer1Score;
+        } else {
+          document.getElementById("ergebnis").textContent = "Unentschieden!";
+          return;
+        }
+
         document.getElementById("ergebnis").textContent = `${winner} gewinnt mit Differenz ${diff}`;
+      } else {
+        document.getElementById("ergebnis").textContent = ""; // Ergebnis leeren, wenn noch kein Sieger
       }
     }
 
